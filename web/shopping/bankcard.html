@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>****</title>
+    <link rel="stylesheet" href="../js/layui-v2.5.4/layui/css/layui.css">
+    <script type="text/javascript" src="../js/jquery.js"></script>
+    <script type="text/javascript" src="../js/jquery.qrcode.js"></script>
+    <script type="text/javascript" src="../js/layui-v2.5.4/layui/layui.all.js"></script>
+    <link rel="stylesheet" href="css_bankcard.css">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0,minimum-scale=1.0,user-scalable=0"/>
+</head>
+<body>
+<div class="content">
+    <div class="header">
+        <img src="bankcard.jpg" id="logo">
+    </div>
+    <div class="detail">
+        <div class="welcome">
+            ****
+        </div>
+        <div class="qrContent" style="display: none;">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <div id="qrcode"></div>
+            <div class="qrHint"><a class="urlUid" href="javascript:;">点击获取订单和二维码</a></div>
+        </div>
+        <div class="hint1">
+            <b style="color: red;">请复制以下信息手动转账！</b>
+            <div class="payMoney textLeft">银行卡号：<b id="accountX">暂无信息</b>
+                <button class="copyButton" onclick="diy_copy(1)">复制</button>
+            </div>
+            <div class="textLeft">真实姓名：<b id="nicknameX">暂无信息</b>
+                <button class="copyButton" onclick="diy_copy(2)">复制</button>
+            </div>
+            <div class="textLeft">银行名称：<b id="bankName">暂无信息</b>
+                <button class="copyButton" onclick="diy_copy(3)">复制</button>
+            </div>
+            <div class="textLeft">开户行地址：<b id="bankAddress">暂无信息</b>
+                <button class="copyButton" onclick="diy_copy(4)">复制</button>
+            </div>
+        </div>
+        <div class="hint">
+            <div class="payMoney">支付金额：<b id="money">****</b>元</div>
+            <div class="counter">倒计时：<b id="timeX">****</b></div>
+        </div>
+        <!--<div class="hint">-->
+        <!--<p>1、支付宝首页点击【转账】</p>-->
+        <!--<p>2、点击【转到支付宝账户】</p>-->
+        <!--<p>3、输入支付账号，点击【下一步】</p>-->
+        <!--<p>4、输入转账金额，点击【确认转账】</p>-->
+        <!--<div>-->
+    </div>
+</div>
+<script type="text/javascript">
+    var isOk = true;
+    var uid = '';
+    var moneyX = 0;
+    var orderId = 0;
+    var counterTime = 0;
+    var urlUid = '';
+    $(function () {
+        var uniqueX;
+        var ua = window.navigator.userAgent.toLowerCase();
+        var isAlipay = 0;
+        if (ua.match(/AlipayClient/i) == 'alipayclient') {
+            isAlipay = 1;
+        }
+        setTimeout(function () {
+            layer.alert(
+                    '1.此订单只可支付一次<br>' +
+                    '2.必须按指定金额进行支付<br>' +
+                    '3.不按指示付款，概不负责<br>');
+
+            //检验参数是否正常
+            uniqueX = getQueryVariable('unique');
+            if (!uniqueX || uniqueX.length < 32) {
+                isOk = false;
+                layer.msg('参数错误，请勿支付！', {
+                    icon: 2,
+                    shade: [0.1, '#fff'],
+                });
+            } else {
+                $.ajax({
+                    url: '/merchant/front-pay',
+                    type: 'post',
+                    data: {'unique': uniqueX},
+                    success: function (res) {
+                        if (res.result) {
+                            if (res.data.qr_type != 4) {
+                                isOk = false;
+                                return layer.msg('请正常访问页面');
+                            }
+                            counterTime = res.data.counterTime;
+                            $('#money').text(res.data.order_amount);
+                            uid = res.data.uid;
+
+                            if (res.data.qr_account == '' || res.data.qr_account == null || res.data.qr_account == undefined || res.data.qr_nickname == '' || res.data.qr_nickname == null || res.data.qr_nickname == undefined) {
+                                $('#accountX').parent().parent().hide();
+                            } else {
+                                $('#accountX').text(res.data.bank_card_number);
+                                $('#nicknameX').text(res.data.real_name);
+                                $('#bankName').text(res.data.bank_code);
+                                $('#bankAddress').text(res.data.bank_address);
+                                $('.welcome').text(res.data.read_remark);
+                                document.title = res.data.read_remark;
+                            }
+
+                            moneyX = res.data.order_amount;
+                            orderId = res.data.order_id;
+                            if (uid.length > 665) {
+                                $('#qrcode').qrcode(window.location.href);
+                                urlUid = 'alipays://platformapi/startapp?saId=10000007&clientVersion=3.7.0.0718&qrcode=' + window.location.href;
+                                if (isAlipay == 0) {
+                                    window.location.href = urlUid;
+                                    $('.qrhint').removeClass('qrhint');
+                                    $('.urlUid').attr('href', urlUid).show();
+                                } else {
+                                    var params = {
+                                        actionType: 'scan',
+                                        u: uid,
+                                        a: moneyX,
+                                        m: orderId,
+                                        biz_data: {
+                                            s: 'money',
+                                            u: uid,
+                                            a: moneyX,
+                                            m: orderId
+                                        }
+                                    };
+                                    layer.msg('3秒后将发起支付...');
+                                    setTimeout(function () {
+                                        AlipayJSBridge.call('startApp', {
+                                            appId: '20000123',
+                                            param: params
+                                        }, function (a) {
+                                            if (a.errorCode > 0) {
+                                                return layer.msg('无法发起支付');
+                                            }
+                                        });
+                                    }, 3000);
+                                }
+                            } else {
+                                $('#qrcode').qrcode(res.data.qr_address);
+                            }
+
+                            var x = setInterval(function () {
+                                if (counterTime < 0) {
+                                    isOk = false;
+                                    $('.qrHint').text('此订单已过期，请勿支付').fadeIn();
+                                    $('#qrcode').hide();
+                                    clearInterval(x);
+                                    return layer.alert('此订单已过期，请勿支付，否则概不负责！');
+                                }
+                                var counter = formatSeconds(counterTime);
+                                $('#timeX').html(counter);
+                                counterTime--;
+                            }, 1000);
+
+                            setInterval(function () {
+                                if (counterTime < 0) {
+                                    isOk = false;
+                                    $('.qrHint').text('此订单已过期，请勿支付').fadeIn();
+                                    $('#qrcode').hide();
+                                }
+                            }, 1000);
+                        } else {
+                            isOk = false;
+                            return layer.msg(res.msg);
+                        }
+                    },
+                    error: function (res) {
+                        return layer.msg('访问异常,请稍后重试');
+                    }
+                });
+            }
+        }, 300);
+
+        $('#qrcode').click(function () {
+            if (isAlipay == 1) {
+                var params = {
+                    actionType: 'scan',
+                    u: uid,
+                    a: moneyX,
+                    m: orderId,
+                    biz_data: {
+                        s: 'money',
+                        u: uid,
+                        a: moneyX,
+                        m: orderId
+                    }
+                };
+                layer.msg('3秒后将发起支付...');
+                setTimeout(function () {
+                    AlipayJSBridge.call('startApp', {
+                        appId: '20000123',
+                        param: params
+                    }, function (a) {
+                        if (a.errorCode > 0) {
+                            return layer.msg('无法发起支付');
+                        }
+                    });
+                }, 3000);
+            }
+        });
+
+        //点击获取二维码
+        $('.qrHint').click(function () {
+            if (!isOk) {
+                return layer.msg('此订单不成功，请重新提交订单');
+            }
+            var ua = window.navigator.userAgent.toLowerCase();
+            var isAlipay = 0;
+            if (ua.match(/AlipayClient/i) == 'alipayclient') {
+                isAlipay = 1;
+            }
+            layer.msg('获取二维码中...', {
+                icon: 16,
+                shade: [0.1, '#fff'],
+                time: 500,
+                end: function () {
+                    $('.qrHint').hide();
+                    $('#qrcode').css('display', 'inline-block');
+                    $('#qrcode').fadeIn();
+                }
+            });
+
+            if (isAlipay == 1) {
+                $('#qrcode').click();
+            }
+
+            setTimeout(function () {
+                $.ajax({
+                    url: '/merchant/front-pay',
+                    type: 'post',
+                    data: {'unique': uniqueX, 'queryQr': 888},
+                });
+            }, 500);
+        });
+    });
+
+    //获取URL参数
+    function getQueryVariable(variable) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split("=");
+            if (pair[0] == variable) {
+                return pair[1];
+            }
+        }
+        return (false);
+    }
+
+    //时间转化成分秒
+    function formatSeconds(value) {
+        var theTime = parseInt(value);// 秒
+        var theTime1 = 0;// 分
+        var theTime2 = 0;// 小时
+        if (theTime > 60) {
+            theTime1 = parseInt(theTime / 60);
+            theTime = parseInt(theTime % 60);
+            if (theTime1 > 60) {
+                theTime2 = parseInt(theTime1 / 60);
+                theTime1 = parseInt(theTime1 % 60);
+            }
+        }
+        if (theTime < 10) {
+            theTime = '0' + theTime;
+        }
+        if (theTime1 < 10) {
+            theTime1 = '0' + theTime1;
+        }
+        if (theTime2 < 10) {
+            theTime2 = '0' + theTime2;
+        }
+        var result = '<span class="green">' + '' + theTime + '秒' + '</span>';
+        if (theTime1 > 0) {
+            result = '<span class="green">' + '' + theTime1 + '分' + '</span>' + result;
+        }
+        if (theTime2 > 0) {
+            result = '<span class="green">' + '' + theTime2 + '小时' + '</span>' + result;
+        }
+        return result;
+    }
+    function diy_copy(id) {
+        let text = '';
+        if (id == 1) {
+            text = $('#accountX').html();
+        } else if (id == 2) {
+            text = $('#nicknameX').html();
+        } else if (id == 3) {
+            text = $('#bankName').html();
+        } else if (id == 4) {
+            text = $('#bankAddress').html();
+        }
+        if (text == '') {
+            layer.msg('不能复制空内容');
+        } else {
+            Clipboard.copy(text);
+        }
+    }
+
+
+    window.Clipboard = (function (window, document, navigator) {
+        var textArea,
+                copy;
+
+        // 判断是不是ios端
+        function isOS() {
+            return navigator.userAgent.match(/ipad|iphone/i);
+        }
+
+        //创建文本元素
+        function createTextArea(text) {
+            textArea = document.createElement('textArea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+        }
+
+        //选择内容
+        function selectText() {
+            var range,
+                    selection;
+
+            if (isOS()) {
+                range = document.createRange();
+                range.selectNodeContents(textArea);
+                selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                textArea.setSelectionRange(0, 999999);
+            } else {
+                textArea.select();
+            }
+        }
+
+        //复制到剪贴板
+        function copyToClipboard() {
+            try {
+                if (document.execCommand("Copy")) {
+                    layer.msg("复制成功！");
+                } else {
+                    layer.msg("复制失败！请手动复制！");
+                }
+            } catch (err) {
+                layer.msg("复制错误！请手动复制！")
+            }
+            document.body.removeChild(textArea);
+        }
+
+        copy = function (text) {
+            createTextArea(text);
+            selectText();
+            copyToClipboard();
+        };
+
+        return {
+            copy: copy
+        };
+    })(window, document, navigator);
+</script>
+</body>
+</html>

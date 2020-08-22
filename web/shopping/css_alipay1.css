@@ -1,0 +1,129 @@
+body {
+    background: white;
+    font-size: 12px;
+}
+
+img {
+    pointer-events: none;
+}
+
+.detail {
+    min-height: 800px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.content {
+    margin: 0 auto;
+    max-width: 640px;
+    background: #00aaef;
+}
+
+.qrContent {
+    margin-top: 3rem;
+    position: relative;
+}
+
+.welcome {
+    background: white;
+    color: #00aaef;
+    margin: 0 auto;
+    height: 3rem;
+    border-radius: 1rem;
+    line-height: 3rem;
+    font-size: 16px;
+    font-weight: bolder;
+    letter-spacing: 0.1rem;
+}
+
+#qrcode {
+    display: none;
+}
+
+#money {
+    font-size: 24px;
+    color: red;
+}
+
+.qrHint {
+    width: 256px;
+    height: 256px;
+    border: 1px solid white;
+    margin: 0 auto;
+    line-height: 256px;
+    font-size: 20px;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    font-weight: bolder;
+}
+
+#timeX {
+    letter-spacing: 0.1rem;
+}
+
+.hint {
+    background: white;
+    color: #00aaef;
+    width: 80%;
+    margin: 0 auto;
+    border-radius: 1rem;
+    line-height: 3rem;
+    font-size: 16px;
+    font-weight: bolder;
+    margin-top: 3rem;
+}
+
+.header {
+    background: white;
+    height: 4.8rem;
+    font-size: 16px;
+    border-top: 5px solid #00aaef;
+    font-weight: bold;
+    text-align: center;
+}
+
+#logo {
+    width: 10rem;
+    margin-top: 0.6rem;
+}
+
+.qrContent span:nth-child(1) {
+    position: absolute;
+    top: -14px;
+    margin-left: -15px;
+    padding: 15px;
+    border-style: solid;
+    border-color: white;
+    border-width: 5px 0 0 5px;
+}
+
+.qrContent span:nth-child(2) {
+    position: absolute;
+    top: -14px;
+    margin-left: 236px;
+    padding: 15px;
+    border-style: solid;
+    border-color: white;
+    border-width: 5px 5px 0 0;
+}
+
+.qrContent span:nth-child(3) {
+    position: absolute;
+    bottom: -15px;
+    margin-left: -13px;
+    padding: 15px;
+    border-style: solid;
+    border-color: white;
+    border-width: 0 0 5px 5px;
+}
+
+.qrContent span:nth-child(4) {
+    position: absolute;
+    bottom: -15px;
+    margin-left: 236px;
+    padding: 15px;
+    border-style: solid;
+    border-color: white;
+    border-width: 0 5px 5px 0;
+}

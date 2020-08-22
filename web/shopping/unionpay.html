@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>云闪付扫码支付</title>
+    <link rel="stylesheet" href="../js/layui-v2.5.4/layui/css/layui.css">
+    <script type="text/javascript" src="../js/jquery.js"></script>
+    <script type="text/javascript" src="../js/jquery.qrcode.js"></script>
+    <script type="text/javascript" src="../js/layui-v2.5.4/layui/layui.all.js"></script>
+    <link rel="stylesheet" href="css_unionpay.css">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0,minimum-scale=1.0,user-scalable=0"/>
+</head>
+<body>
+<div class="content">
+    <div class="header">
+        <img src="unionpay.jpg" id="logo">
+    </div>
+    <div class="detail">
+        <div class="welcome">
+            请用云闪付/各大银行APP扫码付款
+        </div>
+        <div class="qrContent">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <div id="qrcode"></div>
+            <div class="qrHint">点击获取二维码</div>
+        </div>
+        <div class="hint">
+            <div class="payMoney">支付金额：<b id="money">****</b>元</div>
+            <div class="counter">倒计时：<b id="timeX">****</b></div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    var isOk = true;
+    var counterTime = 0;
+    if (/AlipayClient/.test(window.navigator.userAgent)) {
+    }
+    $(function () {
+        var uniqueX;
+        setTimeout(function () {
+            layer.alert(
+                    '1.二维码只可支付一次<br>' +
+                    '2.必须按指定金额进行支付<br>' +
+                    '3.不按指示付款，概不负责<br>');
+
+            //检验参数是否正常
+            uniqueX = getQueryVariable('unique');
+            if (!uniqueX || uniqueX.length < 32) {
+                isOk = false;
+                layer.msg('参数错误，请勿支付！', {
+                    icon: 2,
+                    shade: [0.1, '#fff'],
+                });
+            } else {
+                $.ajax({
+                    url: '/merchant/front-pay',
+                    type: 'post',
+                    data: {'unique': uniqueX},
+                    success: function (res) {
+                        if (res.result) {
+                            if (res.data.qr_type != 3) {
+                                isOk = false;
+                                return layer.msg('请正常访问页面');
+                            }
+                            counterTime = res.data.counterTime;
+                            $('#money').text(res.data.order_amount);
+                            $('#qrcode').qrcode(res.data.qr_address);
+                            var x = setInterval(function () {
+                                if (counterTime < 0) {
+                                    isOk = false;
+                                    $('.qrHint').text('此订单已过期，请勿支付').fadeIn();
+                                    $('#qrcode').hide();
+                                    clearInterval(x);
+                                    return layer.alert('此订单已过期，请勿支付，否则概不负责！');
+                                }
+                                var counter = formatSeconds(counterTime);
+                                $('#timeX').html(counter);
+                                counterTime--;
+                            }, 1000);
+
+                            setInterval(function () {
+                                if (counterTime < 0) {
+                                    isOk = false;
+                                    $('.qrHint').text('此订单已过期，请勿支付').fadeIn();
+                                    $('#qrcode').hide();
+                                }
+                            }, 1000);
+                        } else {
+                            isOk = false;
+                            return layer.msg(res.msg);
+                        }
+                    },
+                    error: function () {
+                        return layer.msg('访问异常,请稍后重试');
+                    }
+                });
+            }
+        }, 300);
+
+        //点击获取二维码
+        $('.qrHint').click(function () {
+            if (!isOk) {
+                return layer.msg('此订单不成功，请重新提交订单');
+            }
+            layer.msg('获取二维码中...', {
+                icon: 16,
+                shade: [0.1, '#fff'],
+                time: 500,
+                end: function () {
+                    $('.qrHint').hide();
+                    $('#qrcode').css('display', 'inline-block');
+                    $('#qrcode').fadeIn();
+                }
+            });
+            setTimeout(function () {
+                $.ajax({
+                    url: '/merchant/front-pay',
+                    type: 'post',
+                    data: {'unique': uniqueX, 'queryQr': 888},
+                });
+            }, 500);
+        });
+    });
+
+    //获取URL参数
+    function getQueryVariable(variable) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i = 0; i < vars.length; i++) {
+            var pair = vars[i].split("=");
+            if (pair[0] == variable) {
+                return pair[1];
+            }
+        }
+        return (false);
+    }
+
+    //时间转化成分秒
+    function formatSeconds(value) {
+        var theTime = parseInt(value);// 秒
+        var theTime1 = 0;// 分
+        var theTime2 = 0;// 小时
+        if (theTime > 60) {
+            theTime1 = parseInt(theTime / 60);
+            theTime = parseInt(theTime % 60);
+            if (theTime1 > 60) {
+                theTime2 = parseInt(theTime1 / 60);
+                theTime1 = parseInt(theTime1 % 60);
+            }
+        }
+        if (theTime < 10) {
+            theTime = '0' + theTime;
+        }
+        if (theTime1 < 10) {
+            theTime1 = '0' + theTime1;
+        }
+        if (theTime2 < 10) {
+            theTime2 = '0' + theTime2;
+        }
+        var result = '<span class="green">' + '' + theTime + '秒' + '</span>';
+        if (theTime1 > 0) {
+            result = '<span class="green">' + '' + theTime1 + '分' + '</span>' + result;
+        }
+        if (theTime2 > 0) {
+            result = '<span class="green">' + '' + theTime2 + '小时' + '</span>' + result;
+        }
+        return result;
+    }
+</script>
+</body>
+</html>
